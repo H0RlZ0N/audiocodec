@@ -1,0 +1,8 @@
+/bin/
+/logs/
+/configs
+/temp
+/out
+/.vscode
+/example/*.exe
+/build/
