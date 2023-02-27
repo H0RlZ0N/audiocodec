@@ -107,7 +107,7 @@ int main()
     char* pcmfile = "out.pcm";
 	char* aacfile = "test.aac";
 	//amrdecode(amrfile, pcmfile);
-	//amrencode(pcmfile, "demotest.amr");
-	//aac_decode(aacfile, "aac.pcm");
-	aac_encode("aac.pcm", "out.aac", 48000);
+	amrencode(pcmfile, "demotest.amr");
+	//aac_decode(aacfile, "out.pcm");
+	//aac_encode("aac.pcm", "out.aac", 48000);
 }

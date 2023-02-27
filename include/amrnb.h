@@ -1,14 +1,14 @@
 #ifndef __AMRNB_H__
 #define __AMRNB_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libswresample/swresample.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Frame type (Table 1a in 3GPP TS 26.101) */
 enum Mode {

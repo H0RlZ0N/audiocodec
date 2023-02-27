@@ -1,5 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavformat/avio.h>
+#include <libswresample/swresample.h>
+#include "libavutil/audio_fifo.h"
+#include "libavutil/fifo.h"
 #include "aac.h"
 
  
@@ -49,16 +55,17 @@ static int check_channel_layout(const AVCodec *codec, const uint64_t channel_lay
  
 static int check_codec( AVCodec *codec, AVCodecContext *codec_ctx)
 {
+    if (!check_sample_rate(codec, codec_ctx->sample_rate)) {
+        fprintf(stderr, "Encoder does not support sample rate %d", codec_ctx->sample_rate);
+        return 0;
+    }
  
     if (!check_sample_fmt(codec, codec_ctx->sample_fmt)) {
         fprintf(stderr, "Encoder does not support sample format %s",
                 av_get_sample_fmt_name(codec_ctx->sample_fmt));
         return 0;
     }
-    if (!check_sample_rate(codec, codec_ctx->sample_rate)) {
-        fprintf(stderr, "Encoder does not support sample rate %d", codec_ctx->sample_rate);
-        return 0;
-    }
+    
     if (!check_channel_layout(codec, codec_ctx->channel_layout)) {
         fprintf(stderr, "Encoder does not support channel layout %lu", codec_ctx->channel_layout);
         return 0;
@@ -300,11 +307,11 @@ int aac_encode(char *in_file, char *out_file, int sample_rate)
     encodectx->channel_layout = AV_CH_LAYOUT_MONO;
     encodectx->sample_rate = sample_rate;
     encodectx->channels = av_get_channel_layout_nb_channels(encodectx->channel_layout);
-    encodectx->sample_fmt = AV_SAMPLE_FMT_FLTP;
+    encodectx->sample_fmt = AV_SAMPLE_FMT_S16;
     encodectx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     if (!check_codec(encodec, encodectx)) {
-        fprintf(stderr, "Check codec error\n");
+        fprintf(stderr, " Check codec error\n");
         avcodec_close(encodectx);
         avcodec_free_context(&encodectx);
         return -3;

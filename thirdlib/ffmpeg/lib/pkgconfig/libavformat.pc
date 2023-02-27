@@ -1,0 +1,14 @@
+prefix=/e/ffmpeg/ffmpeg-4.4.2/install
+exec_prefix=${prefix}
+libdir=/e/ffmpeg/ffmpeg-4.4.2/install/lib
+includedir=/e/ffmpeg/ffmpeg-4.4.2/install/include
+
+Name: libavformat
+Description: FFmpeg container format library
+Version: 58.76.100
+Requires: libavcodec >= 58.134.100, libswresample >= 3.9.100, libavutil >= 56.70.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavformat -lm -lbz2 -lz -lsecur32 -lws2_32
+Libs.private: 
+Cflags: -I${includedir}

@@ -5,13 +5,6 @@
 extern "C" {
 #endif
 
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavformat/avio.h>
-#include <libswresample/swresample.h>
-#include "libavutil/audio_fifo.h"
-#include "libavutil/fifo.h"
-
 /* 
 pcm: 8k采样率 s16le
 aac: 48k采样率 fltp
