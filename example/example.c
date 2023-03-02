@@ -3,6 +3,7 @@
 #include <string.h>
 #include "amrnb.h"
 #include "aac.h"
+#include "webm.h"
 
 // ----------------------------------------> test functions
 
@@ -107,7 +108,9 @@ int main()
     char* pcmfile = "out.pcm";
 	char* aacfile = "test.aac";
 	//amrdecode(amrfile, pcmfile);
-	amrencode(pcmfile, "demotest.amr");
+	//amrencode("out.pcm", "demotest.amr");
 	//aac_decode(aacfile, "out.pcm");
 	//aac_encode("aac.pcm", "out.aac", 48000);
+	//printf("----> duration: %lld\n", get_aac_duration(aacfile));
+	webm_decode("test.webm", "out.pcm");
 }

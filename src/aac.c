@@ -1,11 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavformat/avio.h>
-#include <libswresample/swresample.h>
-#include "libavutil/audio_fifo.h"
-#include "libavutil/fifo.h"
 #include "aac.h"
 
  
@@ -53,7 +45,7 @@ static int check_channel_layout(const AVCodec *codec, const uint64_t channel_lay
     return 0;
 }
  
-static int check_codec( AVCodec *codec, AVCodecContext *codec_ctx)
+static int check_codec(AVCodec *codec, AVCodecContext *codec_ctx)
 {
     if (!check_sample_rate(codec, codec_ctx->sample_rate)) {
         fprintf(stderr, "Encoder does not support sample rate %d", codec_ctx->sample_rate);
@@ -109,6 +101,44 @@ static void get_adts_header(AVCodecContext *ctx, uint8_t *adts_header, int aac_l
     adts_header[6] = 0xFC;
 }
 
+// get aac file duration (us)
+int64_t get_aac_duration(char *aacfile)
+{
+    int ret = 0;
+    int64_t duration = 0;
+    AVFormatContext *fmt_ctx = NULL;
+    //创建输入文件AVFormatContext
+    fmt_ctx = avformat_alloc_context();
+    if (fmt_ctx == NULL) {
+        ret = -1;
+        fprintf(stderr, "alloc fail\n");
+        goto __ERROR;
+    }
+    if (avformat_open_input(&fmt_ctx, aacfile, NULL, NULL) != 0) {
+        ret = -1;
+        fprintf(stderr, "open fail\n");
+        goto __ERROR;
+    }
+
+    //查找文件相关流，并初始化AVFormatContext中的流信息
+    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
+        ret = -1;
+        fprintf(stderr, "find stream fail\n");
+        goto __ERROR;
+    }
+
+    av_dump_format(fmt_ctx, 0, aacfile, 0);
+    duration = fmt_ctx->duration;
+
+__ERROR:
+    if (fmt_ctx) {
+        avformat_close_input(&fmt_ctx);
+        avformat_free_context(fmt_ctx);
+    }
+
+    return duration;
+}
+
 // aac decode
 int aac_decode(char *in_file, char *out_file)
 {
@@ -140,7 +170,7 @@ int aac_decode(char *in_file, char *out_file)
     }
  
     av_dump_format(fmt_ctx, 0, in_file, 0);
- 
+
     //查找音频流索引和解码器
     int stream_index = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &cod, -1);
  
@@ -271,7 +301,6 @@ __ERROR:
 int aac_encode(char *in_file, char *out_file, int sample_rate)
 {
     int ret;
-    int outsize = 0;
     int dst_linesize;
     int64_t cur_pts = 0;
     uint8_t **data = NULL;
@@ -361,16 +390,16 @@ int aac_encode(char *in_file, char *out_file, int sample_rate)
     int max_dst_nb_samples = out_nb_samples;
     printf("channels: %d, nb_samples: %d\n", encodectx->channels, out_nb_samples);
 
-    int pcms16leSize = av_get_bytes_per_sample(in_sample_fmt) \
+    int pcmReadSize = av_get_bytes_per_sample(in_sample_fmt) \
             * in_channels \
             * in_nb_samples;
-    int pcmfltpSize = av_get_bytes_per_sample(encodectx->sample_fmt) \
+    int pcmSendSize = av_get_bytes_per_sample(encodectx->sample_fmt) \
             * encodectx->channels \
             * encodectx->frame_size;
-    char pcm_s16le[pcms16leSize];
-    char pcm_pltp[pcmfltpSize];
-    printf("s16le: %d, fltp: %d\n", pcms16leSize, pcmfltpSize);
-    printf("frame_size %d\n", encodectx->frame_size);
+    char pcm_s16le[pcmReadSize];
+    char pcm_pltp[pcmSendSize];
+    printf("ReadSize: %d, SendSize: %d\n", pcmReadSize, pcmSendSize);
+    printf("aac frame size %d\n", encodectx->frame_size);
 
 
     // 重采样初始化与设置参数
@@ -443,7 +472,7 @@ int aac_encode(char *in_file, char *out_file, int sample_rate)
         }
 
         memset(pcm_s16le, 0, sizeof(pcm_s16le));
-		int len = fread(pcm_s16le, 1, pcms16leSize, in_fb);
+		int len = fread(pcm_s16le, 1, pcmReadSize, in_fb);
 		if (len <= 0) {
             break;
         }
@@ -469,14 +498,14 @@ int aac_encode(char *in_file, char *out_file, int sample_rate)
         av_fifo_generic_write(audiofifo, data[0], buffer_size, NULL);
 
         av_frame_make_writable(frame);
-        while (av_fifo_size(audiofifo) > pcmfltpSize) {
+        while (av_fifo_size(audiofifo) > pcmSendSize) {
             memset(pcm_pltp, 0, sizeof(pcm_pltp));
-            int ret = av_fifo_generic_read(audiofifo, pcm_pltp, pcmfltpSize, NULL);
+            int ret = av_fifo_generic_read(audiofifo, pcm_pltp, pcmSendSize, NULL);
             if (ret < 0) {
                 fprintf(stderr, "av_audio_fifo_read error\n");
                 break;
             }
-            //fwrite(pcm_pltp, 1, pcmfltpSize, test_fb);
+            //fwrite(pcm_pltp, 1, pcmSendSize, test_fb);
 
             ret = av_samples_fill_arrays(frame->data, frame->linesize,
                                    pcm_pltp, frame->channels,
@@ -521,8 +550,8 @@ __ERROR:
         avcodec_free_context(&encodectx);
     }
 
+    avio_closep(&oc->pb);
     avformat_free_context(oc);
-    avio_close(oc->pb);
 
     av_freep(&data[0]);
 
@@ -548,5 +577,5 @@ __ERROR:
         fclose(in_fb);
     }
 
-    return outsize;
+    return 0;
 }
