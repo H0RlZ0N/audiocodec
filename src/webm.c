@@ -137,6 +137,10 @@ int webm_decode(char *in_file, char *out_file)
     }
 
 __ERROR:
+    if (out_fb) {
+        fclose(out_fb);
+    }
+
     if (fmt_ctx) {
         avformat_close_input(&fmt_ctx);
         avformat_free_context(fmt_ctx);
